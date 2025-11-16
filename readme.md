@@ -51,13 +51,10 @@ I enjoy making software so much! Please, if you see any issues make them known!
 ### Signin Page
 ![screenshot](readme/login.jpg)
 
-### Dashboard Page
-![screenshot](readme/dashboard.jpg)
 
-### Update Profile Page
-![screenshot](readme/update.jpg)
 
 ## License
 
 This software is under an MIT License. Which allows full use to edit, distribute, or sell this code.
 See the "LICENSE" file for more information!
+
