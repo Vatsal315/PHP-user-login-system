@@ -1,10 +1,13 @@
 <?php
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
 session_start();
 
 include("connection.php");
 
 if (!isset($_SESSION['username'])) {
     header("location: login.php");
+    exit;
 }
 ?>
 
@@ -30,11 +33,29 @@ if (!isset($_SESSION['username'])) {
 
             if (isset($_POST['update'])) {
                 $username = $_POST['username'];
-                $email = $_POST['email'];
+                $email = trim($_POST['email']);
                 $password = $_POST['password'];
 
                 $id = $_SESSION['id'];
-                $edit_query = mysqli_query($conn, "UPDATE users SET username='$username', email='$email', password='$password' WHERE id = $id");
+
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    echo "<div class='message'>
+                <p>Invalid email address</p>
+                </div><br>";
+                    echo "<a href='javascript:self.history.back()'><button class='btn'>Go Back</button></a>";
+                } else {
+                    if ($password !== null && $password !== '') {
+                        $hash = password_hash($password, PASSWORD_DEFAULT);
+                        $stmt = $conn->prepare("UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?");
+                        $stmt->bind_param("sssi", $username, $email, $hash, $id);
+                    } else {
+                        $stmt = $conn->prepare("UPDATE users SET username = ?, email = ? WHERE id = ?");
+                        $stmt->bind_param("ssi", $username, $email, $id);
+                    }
+
+                    $edit_query = $stmt->execute();
+                    $stmt->close();
+                }
 
                 if ($edit_query) {
                     echo "<div class='message'>
@@ -45,14 +66,17 @@ if (!isset($_SESSION['username'])) {
             } else {
 
                 $id = $_SESSION['id'];
-                $query = mysqli_query($conn, "SELECT * FROM users WHERE id = $id") or die("error occurs");
+                $stmt = $conn->prepare("SELECT username, email, id FROM users WHERE id = ?");
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                $query = $stmt->get_result();
 
-                while ($result = mysqli_fetch_assoc($query)) {
+                while ($result = $query->fetch_assoc()) {
                     $res_username = $result['username'];
                     $res_email = $result['email'];
-                    $res_password = $result['password'];
                     $res_id = $result['id'];
                 }
+                $stmt->close();
 
                 ?>
 
@@ -75,8 +99,7 @@ if (!isset($_SESSION['username'])) {
 
                         <div class="input-container">
                             <i class="fa fa-lock icon"></i>
-                            <input class="input-field password" type="password" placeholder="Password" name="password"
-                                value="<?php echo $res_password; ?>" required>
+                            <input class="input-field password" type="password" placeholder="New Password (leave blank to keep same)" name="password">
                             <i class="fa fa-eye toggle icon"></i>
                         </div>
 

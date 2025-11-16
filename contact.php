@@ -18,14 +18,21 @@
 
             if (isset($_POST['submit'])) {
                 $name = $_POST['name'];
-                $email = $_POST['email'];
+                $email = trim($_POST['email']);
                 $subject = $_POST['subject'];
                 $message = $_POST['message'];
 
-
-                $query = "INSERT INTO contact(name,email,subject,message) VALUES('$name','$email','$subject','$message')";
-
-                $data = mysqli_query($conn, $query);
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    echo "<div class='message'>
+                    <p>Invalid email address</p>
+                    </div><br>";
+                    echo "<a href='index.php'><button class='btn'>Go Back</button></a>";
+                } else {
+                    $stmt = $conn->prepare("INSERT INTO contact(name,email,subject,message) VALUES(?,?,?,?)");
+                    $stmt->bind_param("ssss", $name, $email, $subject, $message);
+                    $data = $stmt->execute();
+                    $stmt->close();
+                }
 
                 if ($data) {
                     echo "<div class='message'>

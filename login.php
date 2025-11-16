@@ -1,4 +1,6 @@
 <?php
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
 session_start();
 ?>
 <!DOCTYPE html>
@@ -21,43 +23,48 @@ session_start();
 
       if (isset($_POST['login'])) {
 
-        $email = $_POST['email'];
+        $email = trim($_POST['email']);
         $pass = $_POST['password'];
 
-        $sql = "select * from users where email='$email'";
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+          echo "<div class='message'>
+                    <p>Invalid email address</p>
+                    </div><br>";
+          echo "<a href='login.php'><button class='btn'>Go Back</button></a>";
+        } else {
+          $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE email = ?");
+          $stmt->bind_param("s", $email);
+          $stmt->execute();
+          $res = $stmt->get_result();
 
-        $res = mysqli_query($conn, $sql);
+          if ($res && $res->num_rows > 0) {
+            $row = $res->fetch_assoc();
+            $password = $row['password'];
 
-        if (mysqli_num_rows($res) > 0) {
+            $decrypt = password_verify($pass, $password);
 
-          $row = mysqli_fetch_assoc($res);
+            if ($decrypt) {
+              session_regenerate_id(true);
+              $_SESSION['id'] = $row['id'];
+              $_SESSION['username'] = $row['username'];
+              header("Location: home.php");
+              exit;
 
-          $password = $row['password'];
+            } else {
+              echo "<div class='message'>
+                    <p>Wrong Password</p>
+                    </div><br>";
 
-          $decrypt = password_verify($pass, $password);
-
-
-          if ($decrypt) {
-            $_SESSION['id'] = $row['id'];
-            $_SESSION['username'] = $row['username'];
-            header("location: home.php");
-
-
+              echo "<a href='login.php'><button class='btn'>Go Back</button></a>";
+            }
           } else {
             echo "<div class='message'>
-                    <p>Wrong Password</p>
+                    <p>Wrong Email or Password</p>
                     </div><br>";
 
             echo "<a href='login.php'><button class='btn'>Go Back</button></a>";
           }
-
-        } else {
-          echo "<div class='message'>
-                    <p>Wrong Email or Password</p>
-                    </div><br>";
-
-          echo "<a href='login.php'><button class='btn'>Go Back</button></a>";
-
+          $stmt->close();
         }
 
 
@@ -75,19 +82,18 @@ session_start();
 
             <div class="input-container">
               <i class="fa fa-envelope icon"></i>
-              <input class="input-field" type="email" placeholder="Email Address" name="email">
+              <input class="input-field" type="email" placeholder="Email Address" name="email" required>
             </div>
 
             <div class="input-container">
               <i class="fa fa-lock icon"></i>
-              <input class="input-field password" type="password" placeholder="Password" name="password">
+              <input class="input-field password" type="password" placeholder="Password" name="password" required>
               <i class="fa fa-eye toggle icon"></i>
             </div>
 
             <div class="remember">
               <input type="checkbox" class="check" name="remember_me">
               <label for="remember">Remember me</label>
-              <span><a href="forgot.php">Forgot password</a></span>
             </div>
 
           </div>

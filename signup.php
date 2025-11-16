@@ -32,23 +32,24 @@
           if (isset($_POST['register'])) {
 
             $name = $_POST['username'];
-            $email = $_POST['email'];
+            $email = trim($_POST['email']);
             $pass = $_POST['password'];
             $cpass = $_POST['cpass'];
 
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+              echo "<div class='message'>
+        <p>Invalid email address</p>
+        </div><br>";
+              echo "<a href='javascript:self.history.back()'><button class='btn'>Go Back</button></a>";
+            } else {
+              $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+              $stmt->bind_param("s", $email);
+              $stmt->execute();
+              $res = $stmt->get_result();
 
-            $check = "select * from users where email='{$email}'";
+              $passwd = password_hash($pass, PASSWORD_DEFAULT);
 
-            $res = mysqli_query($conn, $check);
-
-            $passwd = password_hash($pass, PASSWORD_DEFAULT);
-
-            $key = bin2hex(random_bytes(12));
-
-
-
-
-            if (mysqli_num_rows($res) > 0) {
+              if ($res && $res->num_rows > 0) {
               echo "<div class='message'>
         <p>This email is used, Try another One Please!</p>
         </div><br>";
@@ -60,9 +61,9 @@
 
               if ($pass === $cpass) {
 
-                $sql = "insert into users(username,email,password) values('$name','$email','$passwd')";
-
-                $result = mysqli_query($conn, $sql);
+                $ins = $conn->prepare("INSERT INTO users(username,email,password) VALUES(?,?,?)");
+                $ins->bind_param("sss", $name, $email, $passwd);
+                $result = $ins->execute();
 
                 if ($result) {
 
@@ -80,12 +81,20 @@
                   echo "<a href='javascript:self.history.back()'><button class='btn'>Go Back</button></a>";
                 }
 
+                if (isset($ins)) {
+                  $ins->close();
+                }
+
               } else {
                 echo "<div class='message'>
       <p>Password does not match.</p>
       </div><br>";
 
                 echo "<a href='signup.php'><button class='btn'>Go Back</button></a>";
+              }
+
+              if (isset($stmt)) {
+                $stmt->close();
               }
             }
           } else {

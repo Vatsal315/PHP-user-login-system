@@ -1,10 +1,13 @@
 <?php
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
 session_start();
 
 include("connection.php");
 
 if (!isset($_SESSION['username'])) {
     header("location:login.php");
+    exit;
 }
 
 
@@ -60,7 +63,7 @@ if (!isset($_SESSION['username'])) {
                         </li>
                         <li class="nav-item">
                             <div class="dropdown">
-                                <a class='nav-link dropdown-toggle' href='edit.php?id=$res_id' id='dropdownMenuLink'
+                                <a class='nav-link dropdown-toggle' href='#' id='dropdownMenuLink'
                                     data-bs-toggle='dropdown' aria-expanded='false'>
                                     <i class='bi bi-person'></i>
                                 </a>
@@ -72,13 +75,17 @@ if (!isset($_SESSION['username'])) {
                                         <?php
 
                                         $id = $_SESSION['id'];
-                                        $query = mysqli_query($conn, "SELECT * FROM users WHERE id = $id");
+                                        $stmt = $conn->prepare("SELECT username, email, id FROM users WHERE id = ?");
+                                        $stmt->bind_param("i", $id);
+                                        $stmt->execute();
+                                        $query = $stmt->get_result();
 
-                                        while ($result = mysqli_fetch_assoc($query)) {
+                                        while ($result = $query->fetch_assoc()) {
                                             $res_username = $result['username'];
                                             $res_email = $result['email'];
                                             $res_id = $result['id'];
                                         }
+                                        $stmt->close();
 
 
                                         echo "<a class='dropdown-item' href='edit.php?id=$res_id'>Change Profile</a>";
@@ -104,7 +111,7 @@ if (!isset($_SESSION['username'])) {
             <?php
             // echo $_SESSION['valid'];
             
-            echo $_SESSION['username'];
+            echo htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8');
 
             ?>
             !
